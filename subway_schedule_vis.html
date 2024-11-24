@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>button_MDS_data</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css?family=Pacifico" rel="stylesheet">
+</head>
+
+<body>
+    <div class="button-container">
+        <button id="toggleAnimation" class="font_small">Pause</button>
+    </div>
+
+    <div class="container">
+        <h1 class="font_big">Subway Schedule</h1>
+        <!-- First plot container -->
+        <div class="plot_container2" id="MDS_data1"></div>
+        <!-- Second plot container -->
+        <br>
+        <div class="plot_container2" id="MDS_data2"></div>
+    </div>
+
+    <script src="https://d3js.org/d3.v6.min.js"></script>
+
+    <script>
+        var isAnimating = true; // Variable to track animation state
+        var toggleButton = document.getElementById('toggleAnimation');
+        toggleButton.addEventListener('click', function() {
+            isAnimating = !isAnimating; // Toggle animation statePause
+            if (isAnimating) {
+                interval = setInterval(updateWindow, 50); // Resume animation
+                toggleButton.textContent = "Pause";
+
+            } else {
+                clearInterval(interval); // Stop animation
+                toggleButton.textContent = "Start";
+
+            }
+        });
+    </script>
+
+    <script src="https://d3js.org/d3.v4.js"></script>
+    <script>
+        // set the dimensions and margins of the graph
+        var margin = {top: 10, right: 30, bottom: 40, left: 50},
+            width = 1000 - margin.left - margin.right,
+            height = 120 - margin.top - margin.bottom;
+        
+        // Append the SVG objects to the respective containers
+        var svg1 = d3.select("#MDS_data1")
+            .append("svg")
+            .attr("width", width + margin.left + margin.right)
+            .attr("height", height + margin.top + margin.bottom)
+            .append("g")
+            .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+        
+        var svg2 = d3.select("#MDS_data2")
+            .append("svg")
+            .attr("width", width + margin.left + margin.right)
+            .attr("height", height + margin.top + margin.bottom)
+            .append("g")
+            .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+        // Define x scale
+        var x = d3.scaleLinear()
+            .domain([0, 50])
+            .range([0, width]);
+        svg1.append("g")
+            .attr("transform", "translate(0," + height + ")")
+            .call(d3.axisBottom(x));
+        svg2.append("g")
+            .attr("transform", "translate(0," + height + ")")
+            .call(d3.axisBottom(x));
+
+        var rowNumberText1 = svg1.append("text")
+            .attr("x", width / 2)
+            .attr("y", 10)
+            .attr("text-anchor", "middle")
+            .style("font-size", "20px")
+            .style("font-weight", "bold");
+
+        var rowNumberText2 = svg2.append("text")
+            .attr("x", width / 2)
+            .attr("y", 10)
+            .attr("text-anchor", "middle")
+            .style("font-size", "20px")
+            .style("font-weight", "bold");
+
+        // Initialize current time and time interval
+        var currentTime = 270;
+        var timeInterval = 0.3;
+
+        function updateWindow() {
+            // Update current time
+            currentTime += timeInterval;
+            var temp = Math.floor(currentTime) + 360-270;
+            var minutes = Math.floor(temp / 60);
+            var seconds = temp % 60;
+            rowNumberText1.text("Current Time: " + minutes + " : " + seconds+',  '+'original');
+            rowNumberText2.text("Current Time: " + minutes + " : " + seconds+',  '+'improved');
+
+            // Read the data
+            d3.csv("https://raw.githubusercontent.com/Heqijia/STA323_2024Spring/main/subway_vis_ref.csv", function(data1) {
+                // Filter the data for time between current time and current time + 0.3
+                var filteredData1 = data1.filter(function(d) {
+                    return d.time >= currentTime && d.time < currentTime + timeInterval;
+                });
+                console.log(filteredData1.length);
+
+                // Clear previous dots
+                svg1.selectAll("circle").remove();
+
+                // If there are no dots, stop the animation
+                if (filteredData1.length === 0) {
+                    clearInterval(interval);
+                    return;
+                }
+                for (var i = 0; i < 50; i++) {
+                    svg1.append("circle")
+                      .attr("cx", x(i))
+                      .attr("cy", height)
+                      .attr("r", 2)
+                      .style("fill", "rgba(0, 0, 255, 0.5)"); // Light blue color with reduced opacity
+                }
+
+                // Add dots for each data point in plot 1
+                svg1.selectAll("dot")
+                    .data(filteredData1)
+                    .enter()
+                    .append("circle")
+                    .attr("cx", function(d) { return x(+d.distance); }) // Ensure to convert distance to a number
+                    .attr("cy", height)
+                    .attr("r", 4)
+                    .style("fill", "#ff0000"); // Red color for better visibility
+            });
+
+            // Read the data from the second source
+            d3.csv("https://raw.githubusercontent.com/Heqijia/STA323_2024Spring/main/subway_vis.csv", function(data2) {
+                // Filter the data for time between current time and current time + 0.3
+                var filteredData2 = data2.filter(function(d) {
+                    return d.time >= currentTime && d.time < currentTime + timeInterval;
+                });
+                console.log(filteredData2.length);
+
+                // Clear previous dots
+                svg2.selectAll("circle").remove();
+
+                // If there are no dots, stop the animation
+                if (filteredData2.length === 0) {
+                    clearInterval(interval);
+                    return;
+                }
+                for (var i = 0; i < 50; i++) {
+                    svg2.append("circle")
+                      .attr("cx", x(i))
+                      .attr("cy", height)
+                      .attr("r", 2)
+                      .style("fill", "rgba(0, 0, 255, 0.5)"); // Light blue color with reduced opacity
+                }
+
+                // Add dots for each data point in plot 2
+                svg2.selectAll("dot")
+                    .data(filteredData2)
+                    .enter()
+                    .append("circle")
+                    .attr("cx", function(d) { return x(+d.distance); }) // Ensure to convert distance to a number
+                    .attr("cy", height)
+                    .attr("r", 4)
+                    .style("fill", "#ff0000"); // Red color for better visibility
+            });
+        }
+
+        // Call the updateWindow function initially
+        updateWindow();
+
+        // Set interval to update the window every 300 milliseconds
+        var interval = setInterval(updateWindow, 50);
+    </script>
+</body>
+</html>
